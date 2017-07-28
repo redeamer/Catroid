@@ -267,6 +267,51 @@ def getCurrentGitBranch() {
     }
 }
 
+// Retrieves the comma seperated string of class-fileNames of getExcludedClassFileNames and exchanges
+// the file paths to canonical classnames ('org/company/Class.class' is 'org.company.Class')
+def getExcludeListClassNames() {
+    def excludedClasses = getExcludedClassFileNames().replaceAll("\\+", ".").replaceAll("/", ".").replaceAll(".class", "");
+    logger.info(name + ": Excluded classes from instrumented testing: " + excludedClasses)
+    return excludedClasses
+}
+
+// simply wraps getExcludedClassFileNames for logging purpose
+def getExcludeListFilePaths() {
+    def excludedFiles = getExcludedClassFileNames()
+    logger.info(name + ": Excluded files from unit testing: " + excludedFiles)
+    return excludedFiles
+}
+
+// Returns a comma-seperated list of class filenames, retrieved from the testexclusions-File.
+// The testexclusion-file is meant to contain java or class filepaths
+// java files get replaced by class filenames
+def getExcludedClassFileNames() {
+    def testExclusionsDefaultFileName = 'testexclusions.txt'
+    def testExclusionsFileName = testExclusionsDefaultFileName
+    // -Ptestexclusions is provided: overwrite default testExclusionFileName ('testexclusions.txt')
+    if (project.hasProperty('testexclusions')) {
+        testExclusionsFileName = property('testexclusions')
+        logger.info(name + ": Overwrite default ['" + testExclusionsDefaultFileName + "'] excludefile with: '" + testExclusionsFileName + "'")
+    }
+    def testExclusionsFile = new File(testExclusionsFileName)
+    def excludedFileEntry = ""
+    def excludedEntries = ""
+
+    if ( testExclusionsFile.exists() ) {
+        def count = 0
+        testExclusionsFile.withReader { reader ->
+            while ( (excludedFileEntry = reader.readLine()) != null ) {
+                if (count != 0) {
+                    excludedEntries += ","
+                }
+                excludedEntries += excludedFileEntry.replaceAll('.java$', '.class');
+                count++
+            }
+        }
+    }
+    return excludedEntries
+}
+
 android {
     compileSdkVersion 26
     buildToolsVersion '26.0.2'
@@ -277,6 +322,10 @@ android {
         applicationId appId
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
         versionCode 43
+        def disabledClasses = getExcludeListClassNames()
+        if ( ! disabledClasses.isEmpty() ) {
+            testInstrumentationRunnerArguments.notClass = disabledClasses
+        }
         println "VersionCode is " + versionCode
         versionName "0.9.34"
         println "VersionName is " + versionName
@@ -313,6 +362,12 @@ android {
         htmlReport true
         xmlOutput file("build/reports/lint-report.xml")
         htmlOutput file("build/reports/lint-report.html")
+    }
+
+    testOptions {
+        unitTests.all {
+            exclude getExcludeListFilePaths().split(",")
+        }
     }
 }
 
