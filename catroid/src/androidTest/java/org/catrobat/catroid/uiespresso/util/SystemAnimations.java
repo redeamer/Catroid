@@ -23,6 +23,8 @@
 
 package org.catrobat.catroid.uiespresso.util;
 
+import android.Manifest;
+import android.app.Instrumentation;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.IBinder;
@@ -34,26 +36,28 @@ import java.lang.reflect.Method;
 public class SystemAnimations {
 	private static final String TAG = SystemAnimations.class.getSimpleName();
 
-	private static final String ANIMATION_PERMISSION = "android.permission.SET_ANIMATION_SCALE";
+	private static final String ANIMATION_PERMISSION = Manifest.permission.SET_ANIMATION_SCALE;
 	private static final float DISABLED = 0.0f;
 	private static final float DEFAULT = 1.0f;
 
-	private final Context context;
+	private static boolean permissionGrantedForApp = false;
 
-	public SystemAnimations(Context context) {
+	private final Context context;
+	private final Instrumentation instrumentation;
+
+	public SystemAnimations(final Context context, final Instrumentation instrumentation) {
 		this.context = context;
+		this.instrumentation = instrumentation;
 	}
 
 	public void disableAll() {
-		int permStatus = context.checkCallingOrSelfPermission(ANIMATION_PERMISSION);
-		if (permStatus == PackageManager.PERMISSION_GRANTED) {
+		if (grantPermission()) {
 			setSystemAnimationsScale(DISABLED);
 		}
 	}
 
 	public void enableAll() {
-		int permStatus = context.checkCallingOrSelfPermission(ANIMATION_PERMISSION);
-		if (permStatus == PackageManager.PERMISSION_GRANTED) {
+		if (grantPermission()) {
 			setSystemAnimationsScale(DEFAULT);
 		}
 	}
@@ -78,5 +82,16 @@ public class SystemAnimations {
 		} catch (Exception e) {
 			Log.e(TAG, "Could not change animation scale to " + animationScale + " :'(");
 		}
+	}
+
+	private boolean grantPermission() {
+		if (!permissionGrantedForApp) {
+			instrumentation.getUiAutomation().executeShellCommand(
+					"pm grant " + context.getPackageName() + " " + ANIMATION_PERMISSION);
+			permissionGrantedForApp = true;
+		}
+
+		final int permStatus = context.checkCallingOrSelfPermission(ANIMATION_PERMISSION);
+		return (permStatus == PackageManager.PERMISSION_GRANTED);
 	}
 }

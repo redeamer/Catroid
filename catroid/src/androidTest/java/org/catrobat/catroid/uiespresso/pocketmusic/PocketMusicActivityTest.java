@@ -68,7 +68,7 @@ public class PocketMusicActivityTest {
 	private static final int TACT_COUNT_TO_TOGGLE_RANDOM_NOTE_ON = 3;
 	@Rule
 	public BaseActivityInstrumentationRule<PocketMusicActivity> pocketMusicActivityRule =
-			new BaseActivityInstrumentationRule<>(PocketMusicActivity.class, true, false);
+			new BaseActivityInstrumentationRule<>(PocketMusicActivity.class, true, false, true);
 
 	public static ViewAction toggleNoteViewAtPositionInTact(final int position) {
 
