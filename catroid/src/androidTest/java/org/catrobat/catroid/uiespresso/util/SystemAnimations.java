@@ -23,60 +23,51 @@
 
 package org.catrobat.catroid.uiespresso.util;
 
-import android.content.Context;
-import android.content.pm.PackageManager;
-import android.os.IBinder;
+import android.app.Instrumentation;
 import android.util.Log;
 
-import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
-// Taken from https://gist.github.com/xrigau/11284124
 public class SystemAnimations {
 	private static final String TAG = SystemAnimations.class.getSimpleName();
 
-	private static final String ANIMATION_PERMISSION = "android.permission.SET_ANIMATION_SCALE";
+	private static final List<String> ANIMATION_PROPERTIES;
+	static {
+		ANIMATION_PROPERTIES = Collections.unmodifiableList(Arrays.asList(
+				"window_animation_scale", "transition_animation_scale",
+						"animator_duration_scale"));
+	}
 	private static final float DISABLED = 0.0f;
 	private static final float DEFAULT = 1.0f;
 
-	private final Context context;
+	private final Instrumentation instrumentation;
 
-	public SystemAnimations(Context context) {
-		this.context = context;
+	public SystemAnimations(final Instrumentation instrumentation) {
+		this.instrumentation = instrumentation;
 	}
 
 	public void disableAll() {
-		int permStatus = context.checkCallingOrSelfPermission(ANIMATION_PERMISSION);
-		if (permStatus == PackageManager.PERMISSION_GRANTED) {
-			setSystemAnimationsScale(DISABLED);
-		}
+		setSystemAnimationsScale(DISABLED);
 	}
 
 	public void enableAll() {
-		int permStatus = context.checkCallingOrSelfPermission(ANIMATION_PERMISSION);
-		if (permStatus == PackageManager.PERMISSION_GRANTED) {
-			setSystemAnimationsScale(DEFAULT);
-		}
+		setSystemAnimationsScale(DEFAULT);
 	}
 
 	private void setSystemAnimationsScale(float animationScale) {
 		try {
-			Class<?> windowManagerStubClazz = Class.forName("android.view.IWindowManager$Stub");
-			Method asInterface = windowManagerStubClazz.getDeclaredMethod("asInterface", IBinder.class);
-			Class<?> serviceManagerClazz = Class.forName("android.os.ServiceManager");
-			Method getService = serviceManagerClazz.getDeclaredMethod("getService", String.class);
-			Class<?> windowManagerClazz = Class.forName("android.view.IWindowManager");
-			Method setAnimationScales = windowManagerClazz.getDeclaredMethod("setAnimationScales", float[].class);
-			Method getAnimationScales = windowManagerClazz.getDeclaredMethod("getAnimationScales");
-
-			IBinder windowManagerBinder = (IBinder) getService.invoke(null, "window");
-			Object windowManagerObj = asInterface.invoke(null, windowManagerBinder);
-			float[] currentScales = (float[]) getAnimationScales.invoke(windowManagerObj);
-			for (int i = 0; i < currentScales.length; i++) {
-				currentScales[i] = animationScale;
+			for (String property : ANIMATION_PROPERTIES) {
+				setGlobalSetting(property, String.valueOf(animationScale));
 			}
-			setAnimationScales.invoke(windowManagerObj, new Object[] {currentScales});
 		} catch (Exception e) {
 			Log.e(TAG, "Could not change animation scale to " + animationScale + " :'(");
 		}
+	}
+
+	private void setGlobalSetting(final String key, final String value) {
+		instrumentation.getUiAutomation()
+				.executeShellCommand("settings put global " + key + " " + value);
 	}
 }

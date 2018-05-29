@@ -48,6 +48,13 @@ public class BaseActivityInstrumentationRule<T extends Activity> extends Activit
 	private SystemAnimations systemAnimations;
 	private static final String TAG = BaseActivityInstrumentationRule.class.getSimpleName();
 	private Intent launchIntent = null;
+	private boolean keepAnimationsEnabled = false;
+
+	public BaseActivityInstrumentationRule(Class<T> activityClass, boolean initialTouchMode, boolean launchActivity,
+			boolean keepAnimations) {
+		this(activityClass, initialTouchMode, launchActivity);
+		this.keepAnimationsEnabled = keepAnimations;
+	}
 
 	public BaseActivityInstrumentationRule(Class<T> activityClass, boolean initialTouchMode, boolean launchActivity) {
 		super(activityClass, initialTouchMode, launchActivity);
@@ -76,14 +83,20 @@ public class BaseActivityInstrumentationRule<T extends Activity> extends Activit
 
 	@Override
 	protected void afterActivityLaunched() {
-		systemAnimations = new SystemAnimations(InstrumentationRegistry.getTargetContext());
-		systemAnimations.disableAll();
+		systemAnimations = new SystemAnimations(InstrumentationRegistry.getInstrumentation());
+		if (keepAnimationsEnabled) {
+			systemAnimations.enableAll();
+		} else {
+			systemAnimations.disableAll();
+		}
 		super.afterActivityLaunched();
 	}
 
 	@Override
 	protected void afterActivityFinished() {
-		systemAnimations.enableAll();
+		if (!keepAnimationsEnabled && systemAnimations != null) {
+			systemAnimations.enableAll();
+		}
 		super.afterActivityFinished();
 	}
 
