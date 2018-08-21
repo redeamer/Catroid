@@ -108,6 +108,28 @@ pipeline {
 			}
 		}
 
+		stage('API19 Device tests') {
+			steps {
+				// Cleanup previously used emulator
+				sh "rm last_unique_avd_name.tmp"
+				sh "sed -i 's#^system_image=.*\$#system_image=system-images;android-19;default;x86#g' buildScripts/emulator_config.ini"
+				// Install Android SDK
+				lock("update-android-sdk-on-${env.NODE_NAME}") {
+					sh "./buildScripts/build_step_install_android_sdk"
+				}
+				// Run device tests for class: org.catrobat.catroid.uiespresso.testsuites.ApiLevel19RegressionTestsSuite
+				sh "./buildScripts/build_step_run_tests_on_emulator__api19_test_suite"
+			}
+
+			post {
+				always {
+					junit '**/*TEST*.xml'
+					// stop/kill emulator
+					sh "./buildScripts/build_helper_stop_emulator"
+				}
+			}
+		}
+
 		stage('Standalone-APK') {
 			// It checks that the creation of standalone APKs (APK for a Pocketcode app) works, reducing the risk of breaking gradle changes.
 			// The resulting APK is not verified itself.
