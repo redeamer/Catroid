@@ -119,6 +119,8 @@ pipeline {
 				// This is done since the Jenkins JaCoCo plugin does not work well.
 				// See also JENKINS-212 on jira.catrob.at
 				sh "if [ -f '$JACOCO_XML' ]; then ./buildScripts/cover2cover.py $JACOCO_XML > $JAVA_SRC/coverage3.xml; fi"
+				// ensure that the following test run does not overwrite the results
+				sh "mv ${env.GRADLE_PROJECT_MODULE_NAME}/build ${env.GRADLE_PROJECT_MODULE_NAME}/build-test-pr-suite-pkg"
 			}
 
 			post {
@@ -126,6 +128,28 @@ pipeline {
 					junit '**/*TEST*.xml'
 					step([$class: 'CoberturaPublisher', autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: "$JAVA_SRC/coverage*.xml", failUnhealthy: false, failUnstable: false, maxNumberOfBuilds: 0, onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false, failNoReports: false])
 
+					// stop/kill emulator
+					sh "./buildScripts/build_helper_stop_emulator"
+				}
+			}
+		}
+
+		stage('API19 Device tests') {
+			steps {
+				// Cleanup previously used emulator
+				sh "rm last_unique_avd_name.tmp"
+				sh "sed -i 's#^system_image=.*\$#system_image=system-images;android-19;default;x86#g' buildScripts/emulator_config.ini"
+				// Install Android SDK
+				lock("update-android-sdk-on-${env.NODE_NAME}") {
+					sh "./buildScripts/build_step_install_android_sdk"
+				}
+				// Run device tests for class: org.catrobat.catroid.uiespresso.testsuites.ApiLevel19RegressionTestsSuite
+				sh "./buildScripts/build_step_run_tests_on_emulator__api19_test_suite"
+			}
+
+			post {
+				always {
+					junit '**/*TEST*.xml'
 					// stop/kill emulator
 					sh "./buildScripts/build_helper_stop_emulator"
 				}
