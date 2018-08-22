@@ -117,6 +117,8 @@ pipeline {
 			}
 		}
 
+		// It's currently not clear if the build of the independent APK (as it changes the appId) would influence
+		// subsequent builds. Either check if there is an issue or otherwise keep this as the last build step.
 		stage('Independent-APK') {
 			// It checks that the job builds with the parameters to have unique APKs, reducing the risk of breaking gradle changes.
 			// The resulting APK is not verified on itself.
