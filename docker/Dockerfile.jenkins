@@ -2,19 +2,24 @@ FROM openjdk:8-jdk
 
 LABEL maintainer="contact@catrobat.org"
 
-## Default values for the arguments to be passed from the Jenkinsfile.
-## Those contain the uid and gid of the Jenkins user, and are used to
-## create this user inside of the container, needed for eg ssh-agent to work
-ARG USER_ID=1000
-ARG GROUP_ID=1000
+## Jenkins runs the container as the Jenkins user to keep the environment
+## the same as running outside the container and avoid problems with permissions
+## on the mapped workspace.
+## As the user does not exist inside the container, eg java applications may
+## run into issue. So setting HOME and java's user.home (which would otherwise
+## default to '?') to a writable directory.
+## Also SSH tools have problems if they run with an UID without corresponding
+## user. A solution for this by adding a new user on the fly with the correct
+## jenkins uid was removed with the commit adding this lines.
+ENV JAVA_TOOL_OPTIONS -Duser.home=/home
+ENV HOME /home
+RUN chmod 777 /home
 
 ## python3/lsof: buildScripts
-## curl/openssh-client: upload to web/share
+## curl: upload to web
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		lsof \
 		python3 \
 		curl \
-		openssh-client \
+	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
-## add the 'Jenkins' user
-RUN groupadd -g $GROUP_ID user && useradd -M -u $USER_ID -g $GROUP_ID -d / -s /usr/sbin/nologin user

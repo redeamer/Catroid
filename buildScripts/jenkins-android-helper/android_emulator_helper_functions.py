@@ -39,7 +39,7 @@ def get_open_ports_for_process(pid_to_check):
     output = ""
     if sys.platform == "linux" or sys.platform == "darwin":
         header = True
-        output = subprocess.run([ 'lsof', '-sTCP:LISTEN', '-i4', '-P', '-p', str(pid_to_check), '-a' ], stdout=subprocess.PIPE).stdout.decode(sys.stdout.encoding)
+        output = subprocess.run([ 'lsof', '-sTCP:LISTEN', '-i4', '-P', '-p', str(pid_to_check), '-a' ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL).stdout.decode(sys.stdout.encoding)
         for entry in output.splitlines():
             if header:
                 header = False
